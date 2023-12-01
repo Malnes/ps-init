@@ -1,6 +1,6 @@
 param (
     [Parameter()]
-    [bool]$forceReprocess = $false
+    [bool]$forceReprocess = $true
 )
 
 # Make sure local.settings.json exists 
@@ -96,20 +96,20 @@ if($Global:psDep -ne $hash -or $forceReprocess) {
                     write-host "Removing module with unwanted verison: `"$name`" Version `"$installedVersion`"" -f Yellow
                     remove-item -Path .\modules\$name -Recurse -Force | out-null
 
-                    write-host "    Installing target version of module: `"$name`" Version `"$targetVersion`"" -f Green
+                    write-host "- Installing target version of module: `"$name`" Version `"$targetVersion`"" -f Green
 
                     Save-Module `
                         -Name $name `
                         -RequiredVersion $targetVersion `
                         -Path .\modules
                 } else {
-                    write-host "    Target module already installed: `"$name`" Version `"$installedVersion`"" -f Green
+                    write-host "- Target module already installed: `"$name`" Version `"$installedVersion`"" -f Green
 
                 }
 
             } else {
                 # No module exist. Install it
-                write-host "    Installing target version of module: `"$name`" Version `"$targetVersion`"" -f Green
+                write-host "- Installing target version of module: `"$name`" Version `"$targetVersion`"" -f Green
                 Save-Module `
                     -Name $name `
                     -RequiredVersion $targetVersion `
@@ -138,7 +138,7 @@ if($Global:psDep -ne $hash -or $forceReprocess) {
     }
 
     foreach ($unusedModule in $unusedModules) {
-        write-host "    Removing unused module:`"$($unusedModule.inputObject)`"" -f Green
+        write-host "- Removing unused module:`"$($unusedModule.inputObject)`"" -f Green
         remove-item -Path .\modules\$($unusedModule.inputObject) -Recurse -Force | out-null
     }
 
@@ -150,7 +150,7 @@ if($Global:psDep -ne $hash -or $forceReprocess) {
     Write-Host "Importing modules..." -f Green
 
     foreach ($installedModule in $installedModules) {
-        write-host "    Importing: $($installedModule.name)" -f Green
+        write-host "- Importing: $($installedModule.name)" -f Green
         # Check if- and remove previous imported module of same name
         if(get-module $($installedModule.name)) {
             Remove-Module $($installedModule.name)
