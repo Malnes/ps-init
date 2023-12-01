@@ -16,9 +16,21 @@ This repo contains the base files for a new PowerShell project. Only projects th
 
 ## How to use
 
-1. First, clone the repo (the "." at the end must be included!)
+1. First, clone the repo. Choose alternative 1 or 2, copy the code and execute i terminal
 
-``` console
+``` PowerShell
+# Alternative 1  - Download latest release (recommended)
+$releaseInfo = Invoke-RestMethod -Uri "https://api.github.com/repos/Malnes/ps-init/releases/latest"
+mkdir tempDir
+Invoke-WebRequest -Uri $releaseInfo.zipball_url -OutFile "temp.zip"
+Expand-Archive -LiteralPath "temp.zip" -DestinationPath .\tempDir
+Get-ChildItem -Path ((Get-ChildItem -Path .\tempDir)[0].FullName) -Recurse | Move-Item -Destination .
+Remove-Item .\tempDir -Recurse
+Remove-Item "temp.zip"
+```
+
+``` PowerSHell
+# Alternative 2 - Download latest files from master (the "." at the end must be included!)
 git clone https://github.com/Malnes/ps-init .
 ```
 
@@ -28,5 +40,3 @@ git clone https://github.com/Malnes/ps-init .
 
 > [!NOTE]  
 > If you want manually execute the setup, run ```.\setup.ps1 -forceReprocess:$true```
-
-TEST
