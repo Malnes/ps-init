@@ -5,7 +5,8 @@ param (
 
 # Make sure local.settings.json exists 
 if(-not (Test-Path .\local.settings.json)) {
-    new-item -Path .\ -Name "local.settings.json" -ItemType File
+    write-host "Creating local.settings.json as its missing" -f Green
+    new-item -Path .\ -Name "local.settings.json" -ItemType File  | out-null
     $content = "// Example data`n"
     $content += @{
         upn = "first.last@upn.com"
@@ -16,7 +17,8 @@ if(-not (Test-Path .\local.settings.json)) {
 }
 
 if(-not (Test-Path .\.gitignore)) {
-    new-item -Path .\ -name ".gitignore" -ItemType File
+    write-host "Creating gitignore as its missing" -f Green
+    new-item -Path .\ -name ".gitignore" -ItemType File  | out-null
     Add-Content .\.gitignore "modules`nlocal.settings.json"
 }
 
@@ -40,7 +42,8 @@ if($Global:psDep -ne $hash -or $forceReprocess) {
 
     # Create modules folder
     if(-not (test-path .\modules)){
-        new-item -name modules -ItemType Directory
+        write-host "Creating modules folder" -f Green
+        new-item -name modules -ItemType Directory | Out-Null
     }
 
     function Get-requiredModuleVersion {
@@ -53,8 +56,7 @@ if($Global:psDep -ne $hash -or $forceReprocess) {
         $hasWildcards = $requiredVersion -like "*[*?]*"
 
         # Get all available versions of the module
-        $availableVersions = Find-Module -Name $moduleName -AllVersions | 
-                            Select-Object -ExpandProperty Version
+        $availableVersions = Find-Module -Name $moduleName -AllVersions | Select-Object -ExpandProperty Version
 
         # Filter and sort available versions based on the requiredVersion
         $filteredVersions = $availableVersions | Where-Object {
@@ -92,7 +94,7 @@ if($Global:psDep -ne $hash -or $forceReprocess) {
 
                     #Remove old and download new
                     write-host "Removing module with unwanted verison: `"$name`" Version `"$installedVersion`"" -f Yellow
-                    remove-item -Path .\modules\$name -Recurse -Force
+                    remove-item -Path .\modules\$name -Recurse -Force | out-null
 
                     write-host "    Installing target version of module: `"$name`" Version `"$targetVersion`"" -f Green
 
@@ -137,7 +139,7 @@ if($Global:psDep -ne $hash -or $forceReprocess) {
 
     foreach ($unusedModule in $unusedModules) {
         write-host "    Removing unused module:`"$($unusedModule.inputObject)`"" -f Green
-        remove-item -Path .\modules\$($unusedModule.inputObject) -Recurse -Force
+        remove-item -Path .\modules\$($unusedModule.inputObject) -Recurse -Force | out-null
     }
 
     write-host "Dependencies complete!`n`n" -f Green
