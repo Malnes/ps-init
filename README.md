@@ -28,3 +28,5 @@ git clone https://github.com/Malnes/ps-init .
 
 > [!NOTE]  
 > If you want manually execute the setup, run ```.\setup.ps1 -forceReprocess:$true```
+
+TEST
