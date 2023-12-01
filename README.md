@@ -6,7 +6,7 @@ This repo contains the base files for a new PowerShell project. Only projects th
 
 | File/Folder name | Description  |
 |---|---|
-| app | The root folder of your PowerSell files  |
+| .vscode\launch.json | Instructions for debug execution in vscode. Generally, dont touch,  |
 | app\main.ps1 | Write your code here! |
 | modules | Auto-generated folder containing all dependency-installed modules. Do not touch!  |
 | dependencies.psd1 | Edit this file to add dependencies on powershell modules |
@@ -16,7 +16,14 @@ This repo contains the base files for a new PowerShell project. Only projects th
 
 ## How to get started
 
-1. First download the files
+1. First, clone the repo (the "." at the end must be included!)
+
+``` console
+git clone https://github.com/Malnes/ps-init .
 ```
-git clone https://github.com/username/repository.git
-```
+
+2. (Optinal) Open the **depencencies.psd1** file and add your module depenencies.
+3. Run debug (or manually execute content of .\app\main.ps1) to initialize
+
+[!Note]
+asd
