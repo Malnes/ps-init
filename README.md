@@ -24,6 +24,7 @@ git clone https://github.com/Malnes/ps-init .
 
 2. (Optinal) Open the **depencencies.psd1** file and add your module depenencies.
 3. Run debug (or manually execute content of .\app\main.ps1) to initialize
+4. 
 
-[!Note]
-asd
+> [!NOTE]  
+> If you want manually execute the setup, run ```.\setup.ps1 -forceReprocess:$false```
