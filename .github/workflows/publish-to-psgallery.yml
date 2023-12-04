@@ -16,7 +16,7 @@ jobs:
       with:
         dotnet-version: '3.1.x'  # specify the appropriate version
 
-    - name: Publish to PowerShell Gallery
+    - name: Publish to Powershell Gallery
       run: |
         $ErrorActionPreference = 'Stop'
         Import-Module PowerShellGet -Force

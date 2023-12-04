@@ -14,7 +14,6 @@ PS-init is a PowerShell script designed to streamline the setup of PowerShell pr
 
 PowerShell 7 or higher.
 
-
 ## Installation
 You can install ps-init directly from the PowerShell Gallery:
 
