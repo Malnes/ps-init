@@ -21,7 +21,7 @@ jobs:
         $ErrorActionPreference = 'Stop'
         Import-Module PowerShellGet -Force
         $params = @{
-            Path = "${{ github.workspace }}/ps.init.ps1"
+            Path = "${{ github.workspace }}/ps-init.ps1"
             NuGetApiKey = "${{ secrets.PSPUBLISH }}"
             Force = $true
         }
