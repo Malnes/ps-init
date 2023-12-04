@@ -1,0 +1,27 @@
+name: Publish Script to PowerShell Gallery
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up PowerShell
+      uses: actions/setup-powershell@v1
+
+    - name: Publish to PowerShell Gallery
+      run: |
+        $ErrorActionPreference = 'Stop'
+        Import-Module PowerShellGet -Force
+        $params = @{
+            Path = "${{ github.workspace }}/ps.init.ps1"
+            NuGetApiKey = "${{ secrets.PSPUBLISH }}"
+            Force = $true
+        }
+        Publish-Script @params
+      shell: pwsh

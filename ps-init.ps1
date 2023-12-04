@@ -1,9 +1,50 @@
+
+<#PSScriptInfo
+
+.VERSION 0.2.0
+
+.GUID 18038e71-ec43-4ebc-9155-8088908216f1
+
+.AUTHOR Malnes
+
+.COMPANYNAME SomeComp
+
+.COPYRIGHT All rights reserved SomeComp
+
+.TAGS
+
+.LICENSEURI
+
+.PROJECTURI
+
+.ICONURI
+
+.EXTERNALMODULEDEPENDENCIES 
+
+.REQUIREDSCRIPTS
+
+.EXTERNALSCRIPTDEPENDENCIES
+
+.RELEASENOTES
+
+
+.PRIVATEDATA
+
+#>
+
+<# 
+
+.DESCRIPTION 
+ Small script that creates a povershell project 
+
+#> 
+
 param (
     [Parameter()]
     [bool]$forceReprocess = $true
 )
 
-# Make sure local.settings.json exists 
+# CREATE local.settings.json
 if(-not (Test-Path .\local.settings.json)) {
     write-host "Creating local.settings.json as its missing" -f Green
     new-item -Path .\ -Name "local.settings.json" -ItemType File  | out-null
@@ -16,14 +57,75 @@ if(-not (Test-Path .\local.settings.json)) {
     Add-Content -Path .\local.settings.json -Value $content
 }
 
+# CREATE gitignore 
 if(-not (Test-Path .\.gitignore)) {
-    write-host "Creating gitignore as its missing" -f Green
+    write-host "Creating gitignore" -f Green
     new-item -Path .\ -name ".gitignore" -ItemType File  | out-null
     Add-Content .\.gitignore "modules`nlocal.settings.json"
 }
 
+# CREATE app/main
+if(-not (Test-Path .\app\main.ps1)) {
+    write-host "Creating main.ps1" -f Green
+    new-item -Path .\ -name "app" -ItemType Directory | Out-Null
+    new-item -Path .\app -name "main.ps1" -ItemType File  | out-null
+    Add-Content .\app\main.ps1 -Value @"
+# process module dependencies. Run with -forceReprocess if nessesary
+ps-init -forceReprocess:`$false
+`$var = Get-Content .\local.settings.json | ConvertFrom-Json
 
-# make sure this script is only executen on new sessions or when changes is made to dependencies
+# Write you code below
+"@
+}
+
+# CREATE dependencies.psd1
+if(-not (Test-Path .\dependencies.psd1)) {
+    write-host "Creating dependencies.psd1" -f Green
+    new-item -Path .\ -name "dependencies.psd1" -ItemType File | Out-Null
+    Add-Content .\dependencies.psd1 -Value @"
+@{
+
+    #'pnp.powershell' = '*'
+    # 'microsoft.Graph.authentication' = '2.2.*'
+    # 'microsoft.Graph.users' = '2.2.*'
+    
+}
+"@
+}
+
+# CREATE modules
+if(-not (test-path .\modules)){
+    write-host "Creating modules folder" -f Green
+    new-item -name modules -ItemType Directory | Out-Null
+}
+
+
+# CREATE .vscode\launch.json
+if(-not (Test-Path .\.vscode\launch.json)) {
+    write-host "Creating launch.json" -f Green
+    new-item -Path .\ -name ".vscode" -ItemType Directory | Out-Null
+    new-item -Path .\.vscode -name "launch.json" -ItemType File  | out-null
+    Add-Content .\.vscode\launch.json -Value @"
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "PowerShell: Launch Script",
+            "type": "PowerShell",
+            "request": "launch",
+            "script": "${workspaceFolder}/app/main.ps1",
+            "args": []
+        }
+    ]
+}
+"@
+}
+
+
+# Only process modules if new or changes has been made
 $hash = get-filehash -Path .\dependencies.psd1 | select -ExpandProperty Hash
 if($Global:psDep -ne $hash -or $forceReprocess) {
 
@@ -40,12 +142,7 @@ if($Global:psDep -ne $hash -or $forceReprocess) {
     # Load dependencies from the .psd1 file
     $dependencies = Import-PowerShellDataFile -Path $dependenciesFilePath
 
-    # Create modules folder
-    if(-not (test-path .\modules)){
-        write-host "Creating modules folder" -f Green
-        new-item -name modules -ItemType Directory | Out-Null
-    }
-
+    # Get the latest available module version according to the requirement in dependencies.psd1
     function Get-requiredModuleVersion {
         param (
             [string]$requiredVersion,
@@ -73,8 +170,6 @@ if($Global:psDep -ne $hash -or $forceReprocess) {
 
         return $latestAvailableVersion
     }
-
-
 
 
     # Downlaod modules
@@ -141,14 +236,11 @@ if($Global:psDep -ne $hash -or $forceReprocess) {
         write-host "- Removing unused module:`"$($unusedModule.inputObject)`"" -f Green
         remove-item -Path .\modules\$($unusedModule.inputObject) -Recurse -Force | out-null
     }
-
     write-host "Dependencies complete!`n`n" -f Green
 
 
-
-
+    # Import modules
     Write-Host "Importing modules..." -f Green
-
     foreach ($installedModule in $installedModules) {
         write-host "- Importing: $($installedModule.name)" -f Green
         # Check if- and remove previous imported module of same name
@@ -168,3 +260,9 @@ if($Global:psDep -ne $hash -or $forceReprocess) {
     write-host "No changes to me made" -f Green
  
 }
+
+
+write-host "Complete!" -ForegroundColor Green
+
+
+
