@@ -1,7 +1,7 @@
 
 <#PSScriptInfo
 
-.VERSION 0.3.0
+.VERSION 0.3.1
 
 .GUID 18038e71-ec43-4ebc-9155-8088908216f1
 
@@ -43,72 +43,64 @@ param (
     [Parameter()]
     [bool]$forceReprocess = $true
 )
+function new-ItemWithContent {
+    param(
+        [Parameter(Mandatory=$true)][string]$Path,
+        [Parameter(Mandatory=$true)][string]$ItemType,
+        [string]$Content
+    )
+
+    if (-not (Test-Path $Path)) {
+        Write-Host "Creating $Path as it's missing" -ForegroundColor Green
+        $item = New-Item -Path $Path -ItemType $ItemType -Force | Out-Null
+
+        if ($ItemType -eq "File" -and $Content) {
+            Add-Content -Path $Path -Value $Content
+        }
+    }
+}
+
 
 # CREATE local.settings.json
-if(-not (Test-Path .\local.settings.json)) {
-    write-host "Creating local.settings.json as its missing" -f Green
-    new-item -Path .\ -Name "local.settings.json" -ItemType File  | out-null
-    $content = "// Example data`n"
-    $content += @{
-        upn = "first.last@upn.com"
-        password = "Password"
-    } | convertto-json
+$content = @{upn = "example@upn.com"; password = "Password"} | ConvertTo-Json
+new-ItemWithContent -Path ".\local.settings.json" -ItemType "File" -Content $content
 
-    Add-Content -Path .\local.settings.json -Value $content
-}
-
+# CREATE project.settings.json
+$content = @{url = "example.com"; guid = "0000000-0000-00000-00000000"} | ConvertTo-Json
+new-ItemWithContent -Path ".\project.settings.json" -ItemType "File" -Content $content
+    
 # CREATE gitignore 
-if(-not (Test-Path .\.gitignore)) {
-    write-host "Creating gitignore" -f Green
-    new-item -Path .\ -name ".gitignore" -ItemType File  | out-null
-    Add-Content .\.gitignore "modules`nlocal.settings.json"
-}
+new-ItemWithContent -Path ".\.gitignore" -ItemType "File" -Content "modules`nlocal.settings.json"
 
 # CREATE app/main
-if(-not (Test-Path .\app\main.ps1)) {
-    write-host "Creating main.ps1" -f Green
-    new-item -Path .\ -name "app" -ItemType Directory | Out-Null
-    new-item -Path .\app -name "main.ps1" -ItemType File  | out-null
-    Add-Content .\app\main.ps1 -Value @"
-# process module dependencies. Run with -forceReprocess if nessesary
+$content = @"
+# process module dependencies. Run with -forceReprocess if necessary
 ps-init -forceReprocess:`$false
-`$var = Get-Content .\local.settings.json | ConvertFrom-Json
+`$LS = Get-Content .\local.settings.json | ConvertFrom-Json -Depth 10 -AsHashtable
+`$PS = Get-Content .\project.settings.json | ConvertFrom-Json -Depth 10 -AsHashtable
+`$var = `$LS + `$PS
 
-# Write you code below
+# Write your code below
 "@
-}
+new-ItemWithContent -Path ".\app" -ItemType "Directory"
+new-ItemWithContent -Path ".\app\main.ps1" -ItemType "File" -Content $content
 
 # CREATE dependencies.psd1
-if(-not (Test-Path .\dependencies.psd1)) {
-    write-host "Creating dependencies.psd1" -f Green
-    new-item -Path .\ -name "dependencies.psd1" -ItemType File | Out-Null
-    Add-Content .\dependencies.psd1 -Value @"
+$content = @"
 @{
-
-    #'pnp.powershell' = '*'
+    # 'pnp.powershell' = '*'
     # 'microsoft.Graph.authentication' = '2.2.*'
     # 'microsoft.Graph.users' = '2.2.*'
-    
 }
 "@
-}
+new-ItemWithContent -Path ".\dependencies.psd1" -ItemType "File" -Content $content
 
 # CREATE modules
-if(-not (test-path .\modules)){
-    write-host "Creating modules folder" -f Green
-    new-item -name modules -ItemType Directory | Out-Null
-}
-
+new-ItemWithContent -Path ".\modules" -ItemType "Directory"
 
 # CREATE .vscode\launch.json
-if(-not (Test-Path .\.vscode\launch.json)) {
-    write-host "Creating launch.json" -f Green
-    new-item -Path .\ -name ".vscode" -ItemType Directory | Out-Null
-    new-item -Path .\.vscode -name "launch.json" -ItemType File  | out-null
-    Add-Content .\.vscode\launch.json -Value @"
+$content = @"
 {
-    // Use IntelliSense to learn about possible attributes.
-    // Hover to view descriptions of existing attributes.
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
@@ -122,7 +114,9 @@ if(-not (Test-Path .\.vscode\launch.json)) {
     ]
 }
 "@
-}
+new-ItemWithContent -Path ".\.vscode" -ItemType "Directory"
+new-ItemWithContent -Path ".\.vscode\launch.json" -ItemType "File" -Content $content
+
 
 
 # Only process modules if new or changes has been made
