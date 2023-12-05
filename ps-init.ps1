@@ -296,22 +296,22 @@ if($Global:psDep -ne $hash -or $forceReprocess) {
         $moduleArr += $obj
     }
     
-    $orderedImportList = Sort-PartsByDependencies -parts $moduleArr
+    if($moduleArr) {
+        $orderedImportList = Sort-PartsByDependencies -parts $moduleArr
 
+        # Check for missing dependencies
+        $missingModules = Compare-Object -ReferenceObject $orderedImportList -DifferenceObject $installedModules.name 
+        if($missingModules) {
+            write-host "ERROR: Missing dependencies:" -F Red
 
-    # Check for missing dependencies
-    $missingModules = Compare-Object -ReferenceObject $orderedImportList -DifferenceObject $installedModules.name 
-    if($missingModules) {
-        write-host "ERROR: Missing dependencies:" -F Red
+            foreach ($missingModule in $missingModules) {
+                write-host "ERROR: - $($missingModules.inputObject)" -F Red
+            }
 
-        foreach ($missingModule in $missingModules) {
-            write-host "ERROR: - $($missingModules.inputObject)" -F Red
+            write-host "`nERROR: Add the missing module(s) to `"dependencies.psd1`" and try again"-F Red
+            BREAK
         }
-
-        write-host "`nERROR: Add the missing module(s) to `"dependencies.psd1`" and try again"-F Red
-        BREAK
     }
-
 
     # Import modules
     Write-Host "Importing modules..." -f Green
