@@ -171,6 +171,59 @@ if($Global:psDep -ne $hash -or $forceReprocess) {
         return $latestAvailableVersion
     }
 
+    function Sort-PartsByDependencies {
+        param (
+            [Parameter(Mandatory=$true)]
+            [array]$parts
+        )
+    
+        # Convert JSON parts to a hashtable for easier access
+        $dependencyGraph = @{}
+        foreach ($part in $parts) {
+            $dependencyGraph[$part.part] = $part.dependsOn
+        }
+    
+        # Hashtable to keep track of whether a part is visited
+        $visited = @{}
+    
+        # List to store the sorted parts
+        $sortedParts = New-Object System.Collections.Generic.List[Object]
+    
+        # Recursive function to apply topological sorting
+        function TopologicalSort($currentPart) {
+            if ($visited[$currentPart] -eq $true) {
+                return
+            }
+    
+            if ($visited[$currentPart] -eq 'temp') {
+                throw "Circular dependency detected."
+            }
+    
+            # Mark this part as temporarily visited
+            $visited[$currentPart] = 'temp'
+    
+            # Recursively visit all the dependencies first
+            foreach ($dependency in $dependencyGraph[$currentPart]) {
+                TopologicalSort $dependency
+            }
+    
+            # Mark as permanently visited and add to sorted list
+            $visited[$currentPart] = $true
+            $sortedParts.Add($currentPart)
+        }
+    
+        # Apply topological sort to each part
+        foreach ($part in $dependencyGraph.Keys) {
+            if (-not $visited.ContainsKey($part)) {
+                TopologicalSort $part
+            }
+        }
+    
+        # Return the sorted list of parts
+        return $sortedParts
+    }
+    
+
 
     # Downlaod modules
     foreach ($name in $dependencies.keys) {
@@ -239,21 +292,59 @@ if($Global:psDep -ne $hash -or $forceReprocess) {
     write-host "Dependencies complete!`n`n" -f Green
 
 
+    # Sort modules for import after dependencies
+    $moduleArr = @()
+    foreach ($mod in $installedModules) {
+        $obj = [PSCustomObject]@{
+            part = $mod.name
+            dependsOn = (get-module -name ".\modules\$($mod.name)" -ListAvailable).requiredModules | select -ExpandProperty name
+        }
+        $moduleArr += $obj
+    }
+    
+    $orderedImportList = Sort-PartsByDependencies -parts $moduleArr
+
+
+    # Check for missing dependencies
+    $missingModules = Compare-Object -ReferenceObject $orderedImportList -DifferenceObject $installedModules.name 
+    if($missingModules) {
+        write-host "ERROR: Missing dependencies:" -F Red
+
+        foreach ($missingModule in $missingModules) {
+            write-host "ERROR: - $($missingModules.inputObject)" -F Red
+        }
+
+        write-host "`nERROR: Add the missing module(s) to `"dependencies.psd1`" and try again"-F Red
+        BREAK
+    }
+
+
     # Import modules
     Write-Host "Importing modules..." -f Green
     foreach ($installedModule in $installedModules) {
         write-host "- Importing: $($installedModule.name)" -f Green
         # Check if- and remove previous imported module of same name
         if(get-module $($installedModule.name)) {
-            Remove-Module $($installedModule.name)
+            try {
+                Remove-Module $($installedModule.name) -force -ErrorAction Stop
+            } catch {
+                Write-Host "WARNING: Unable to reload `"$($installedModule.name)`". If this causes any issues, try running the script in a new terminal." -f Yellow
+            }
         }
 
         #import module
-        import-module .\modules\$($installedModule.name)
+        try {
+            import-module .\modules\$($installedModule.name)
+        } catch {
+            if ($_.Exception.Message -eq "Assembly with same name is already loaded") {
+                write-host "Warning: Assembly already loaded for $($installedModule.name). If the module is not working properly, you can try running the script in a new terminal." -ForegroundColor Yellow
+            }
+        }
     }
 
+
     $Global:psDep = get-filehash -Path .\dependencies.psd1 | select -ExpandProperty Hash
-    Write-Host "Modules imported!`n" -f Green
+    Write-Host "`nModules imported!`n" -f Green
 
 } else {
     # Dependencies has not changed.
@@ -261,8 +352,27 @@ if($Global:psDep -ne $hash -or $forceReprocess) {
  
 }
 
+# Final check to see if all modules are loaded
+$loadedModules = get-module | select -ExpandProperty name
+$unloadedModules = @()
+foreach ($m in $installedModules.name) {
+    if ($loadedModules -notcontains $m) {
+        $unloadedModules += $m
+    }
+}
 
-write-host "Complete!" -ForegroundColor Green
+if ($unloadedModules) {
+    write-host "ERROR: Some required module(s) could not be loaded" -f Red
+    foreach ($unM in $unloadedModules) {
+        write-host "ERROR: - $unM" -f Red
+    }
+    write-host "`nERROR: Try rerunning the script, manually loading the module(s) or executing in a new terminal" -f Red
+    write-host "Completed with errors" -f Yellow
+} else {
+    write-host "Complete!" -ForegroundColor Green
+
+}
+
 
 
 
