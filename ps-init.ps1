@@ -1,7 +1,7 @@
 
 <#PSScriptInfo
 
-.VERSION 0.3.3
+.VERSION 0.3.4
 
 .GUID 18038e71-ec43-4ebc-9155-8088908216f1
 
@@ -332,7 +332,19 @@ if($Global:psDep -ne $hash -or $forceReprocess) {
             import-module .\modules\$($installedModule.name)
         } catch {
             if ($_.Exception.Message -eq "Assembly with same name is already loaded") {
-                write-host "Warning: Assembly already loaded for $($installedModule.name). If the module is not working properly, you can try running the script in a new terminal." -ForegroundColor Yellow
+                $assemblyLocation = [System.AppDomain]::CurrentDomain.GetAssemblies() | Where-Object Location | Sort-Object -Property FullName | Select-Object -Property FullName, Location, GlobalAssemblyCache, IsFullyTrusted | where {$_.FullName -match "$($installedModule.name)"} | select -ExpandProperty Location
+
+                write-host "`nWarning: Assembly already loaded for $($installedModule.name). You are getting this error because importing modules also imports .NET assemblies, and while we can unload powershell modules, we cannot unload assemblies" -f Yellow
+                write-host "This script installs and loads dependent modules in the project itself, but your current terminal have allready loaded another installed version ot the assembly from $assemblyLocation" -f Yellow
+                write-host "You have three options:" -f Yellow
+                write-host "1 - contune running the script. You will probably get a lot of error messages. Things might work, or it might not..." -f Yellow
+                write-host "2 - Create and execute the code in a new terminal" -f Yellow
+                write-host "3 - Close the folder, then restart vscode and try again" -f Yellow
+                write-host "`nPress ENTER to continue, or press ctrl+c to abort (you should abort and go for step 2 or 3)"
+                read-host ".."
+                
+
+
             }
         }
     }
