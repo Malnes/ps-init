@@ -61,6 +61,21 @@ function new-ItemWithContent {
     }
 }
 
+# Check if powershell 7 is installed
+try {
+    $pwshPath = (Get-Command pwsh).Source
+    if (-not $pwshPath) {
+        Write-Host "PowerShell 7 is not installed"
+        Write-Host "Install PowerShell 7 and execute ps-init again"
+        BREAK
+    }
+} catch {
+    Write-Host "An error occurred. PowerShell 7 may not be installed."
+    BREAK
+}
+
+
+
 
 # CREATE local.settings.json
 $content = @{upn = "example@upn.com"; password = "Password"} | ConvertTo-Json
@@ -112,6 +127,15 @@ while (`$continueLoop) {
 
     if (`$finished -eq `$true) {
         `$continueLoop = `$false
+    } else {
+        write-host "Select option" -f green
+        write-host "-------------" -f green
+        write-host "[1] - Continue loop" -f green
+        write-host "[2] - Exit loop" -f green
+        `$kljash = Read-Host ".."
+        if (`$kljash -ne 1) {
+            `$continueLoop = `$false
+        }
     }
 }
 Write-Host "Main Processing Loop Complete."
@@ -130,7 +154,8 @@ Main loop
 - To end the loop or only run once, set the variable `$finished to `$true
 - project settings and local settings can be accessed by using dot-notation on the variable `$var
 - Execute script with the RUN.bat file
-Write your code below
+
+  Write your code below
 #>
 
 
@@ -143,7 +168,7 @@ new-ItemWithContent -Path ".\app\main.ps1" -ItemType "File" -Content $content
 $content = @"
 @echo off
 cd %~dp0
-"C:\Program Files\PowerShell\7\pwsh.exe" -NoExit -ExecutionPolicy Bypass -File ".\app\main.ps1"
+"$pwshPath" -NoExit -ExecutionPolicy Bypass -File ".\sequence.ps1"
 
 "@
 new-ItemWithContent -Path ".\RUN.bat" -ItemType "File" -Content $content
@@ -162,23 +187,23 @@ new-ItemWithContent -Path ".\dependencies.psd1" -ItemType "File" -Content $conte
 new-ItemWithContent -Path ".\modules" -ItemType "Directory"
 
 # CREATE .vscode\launch.json
-$content = @"
-{
-    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
-    "version": "0.2.0",
-    "configurations": [
-        {
-            "name": "PowerShell: Launch Script",
-            "type": "PowerShell",
-            "request": "launch",
-            "script": "${workspaceFolder}/app/main.ps1",
-            "args": []
-        }
-    ]
-}
-"@
-new-ItemWithContent -Path ".\.vscode" -ItemType "Directory"
-new-ItemWithContent -Path ".\.vscode\launch.json" -ItemType "File" -Content $content
+# $content = @"
+# {
+#     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+#     "version": "0.2.0",
+#     "configurations": [
+#         {
+#             "name": "PowerShell: Launch Script",
+#             "type": "PowerShell",
+#             "request": "launch",
+#             "script": "${workspaceFolder}/app/main.ps1",
+#             "args": []
+#         }
+#     ]
+# }
+# "@
+# new-ItemWithContent -Path ".\.vscode" -ItemType "Directory"
+# new-ItemWithContent -Path ".\.vscode\launch.json" -ItemType "File" -Content $content
 
 
 
