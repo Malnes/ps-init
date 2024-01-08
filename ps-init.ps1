@@ -1,7 +1,7 @@
 
 <#PSScriptInfo
 
-.VERSION 0.4.0
+.VERSION 0.4.1
 
 .GUID 18038e71-ec43-4ebc-9155-8088908216f1
 
@@ -172,6 +172,43 @@ cd %~dp0
 
 "@
 new-ItemWithContent -Path ".\RUN.bat" -ItemType "File" -Content $content
+
+
+# CREATE RUN-elevated.bat
+$content = @"
+@echo off
+:: Check for administrative privileges
+net session >nul 2>&1
+if %errorlevel% == 0 (
+    echo Running with administrative privileges
+) else (
+    echo Requesting administrative privileges...
+    goto UACPrompt
+)
+
+:: Your original script here
+cd %~dp0
+"$pwshPath" -NoExit -ExecutionPolicy Bypass -File ".\sequence.ps1"
+exit /b
+
+:UACPrompt
+echo Set UAC = CreateObject^("Shell.Application"^) > "%temp%\getadmin.vbs"
+echo UAC.ShellExecute "%~s0", "", "", "runas", 1 >> "%temp%\getadmin.vbs"
+"%temp%\getadmin.vbs"
+exit /b
+"@
+new-ItemWithContent -Path ".\RUN-elevated.bat" -ItemType "File" -Content $content
+
+
+
+
+
+
+
+
+
+
+
 
 # CREATE dependencies.psd1
 $content = @"
