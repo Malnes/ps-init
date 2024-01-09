@@ -278,10 +278,24 @@ new-ItemWithContent -Path ".\README.md" -ItemType "File" -Content $content
 
 
 # Theck if dependencies has been modified and initialized
+# Get current hash
 $hash = get-filehash -Path .\dependencies.psd1 | select -ExpandProperty Hash
 
+# Get saved hash (if any)
+if(Test-Path .\modules\hash) {
+    $savedHash = Get-Content .\modules\hash
+    $savedHashAge = get-item .\modules\hash
+    $now = get-date 
+    $hashAge = $now - $savedHashAge.LastWriteTime | select -ExpandProperty days
+} else {
+    $hashAge = 999
+}
+
+
+
+
 # Process modules
-if($Global:psDep -ne $hash -or $forceReprocess) {
+if($savedHash -ne $hash -or $hashAge -gt 7 -or $forceReprocess) {
 
 
     write-host "`nInitializing..." -f Green
@@ -424,7 +438,7 @@ if($Global:psDep -ne $hash -or $forceReprocess) {
     }
 
     # Remove unwanted modules
-    [array]$installedModules   = Get-ChildItem -Path .\modules
+    [array]$installedModules   = Get-ChildItem -Path .\modules | where {$_.name -ne "hash"}
     [array]$requiredModules    = $dependencies.keys
 
     if($null -ne $requiredModules -and $null -ne $installedModules) {
@@ -509,7 +523,8 @@ if($Global:psDep -ne $hash -or $forceReprocess) {
     }
 
 
-    $Global:psDep = get-filehash -Path .\dependencies.psd1 | select -ExpandProperty Hash
+    $newHash = get-filehash -Path .\dependencies.psd1 | select -ExpandProperty Hash
+    $newHash | Out-File -FilePath .\modules\hash
     Write-Host "`nModules imported!`n" -f Green
 
 } else {
@@ -519,6 +534,7 @@ if($Global:psDep -ne $hash -or $forceReprocess) {
 }
 
 # Final check to see if all modules are loaded
+[array]$installedModules   = Get-ChildItem -Path .\modules | where {$_.name -ne "hash"}
 $loadedModules = get-module | select -ExpandProperty name
 $unloadedModules = @()
 foreach ($m in $installedModules.name) {
