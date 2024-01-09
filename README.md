@@ -48,6 +48,8 @@ The following table shows the files created ant is purpose
 ## Contributing
 Contributions to ps-init are welcome! Feel free to submit pull requests or report issues to enhance the script's functionality and efficiency.
 
+> **Note**: When updating the file version, edit remember to edit the PSScriptInfo section AND the version number used in sequence.ps1 file
+
 ## License
 This script is released under the MIT License. For more details, see the LICENSE file in this repository.
 
