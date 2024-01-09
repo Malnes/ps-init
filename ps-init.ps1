@@ -495,45 +495,10 @@ if($savedHash -ne $hash -or $hashAge -gt 7 -or $forceReprocess) {
         }
     }
 
-    # Import modules
-    Write-Host "Importing modules..." -f Green
-    foreach ($installedModule in $installedModules) {
-        write-host "- Importing: $($installedModule.name)" -f Green
-        # Check if- and remove previous imported module of same name
-        if(get-module $($installedModule.name)) {
-            try {
-                Remove-Module $($installedModule.name) -force -ErrorAction Stop
-            } catch {
-                Write-Host "WARNING: Unable to reload `"$($installedModule.name)`". If this causes any issues, try running the script in a new terminal." -f Yellow
-            }
-        }
-
-        #import module
-        try {
-            import-module .\modules\$($installedModule.name)
-        } catch {
-            if ($_.Exception.Message -eq "Assembly with same name is already loaded") {
-                $assemblyLocation = [System.AppDomain]::CurrentDomain.GetAssemblies() | Where-Object Location | Sort-Object -Property FullName | Select-Object -Property FullName, Location, GlobalAssemblyCache, IsFullyTrusted | where {$_.FullName -match "$($installedModule.name)"} | select -ExpandProperty Location
-
-                write-host "`nWarning: Assembly already loaded for $($installedModule.name). You are getting this error because importing modules also imports .NET assemblies, and while we can unload powershell modules, we cannot unload assemblies" -f Yellow
-                write-host "This script installs and loads dependent modules in the project itself, but your current terminal have allready loaded another installed version ot the assembly from $assemblyLocation" -f Yellow
-                write-host "You have three options:" -f Yellow
-                write-host "1 - contune running the script. You will probably get a lot of error messages. Things might work, or it might not..." -f Yellow
-                write-host "2 - Create and execute the code in a new terminal" -f Yellow
-                write-host "3 - Close the folder, then restart vscode and try again" -f Yellow
-                write-host "`nPress ENTER to continue, or press ctrl+c to abort (you should abort and go for step 2 or 3)"
-                read-host ".."
-                
-
-
-            }
-        }
-    }
-
-
     $newHash = get-filehash -Path .\dependencies.psd1 | select -ExpandProperty Hash
     $newHash | Out-File -FilePath .\modules\hash
     Write-Host "`nModules imported!`n" -f Green
+
 
 } else {
     # Dependencies has not changed.
@@ -543,6 +508,51 @@ if($savedHash -ne $hash -or $hashAge -gt 7 -or $forceReprocess) {
 
 # Final check to see if all modules are loaded
 [array]$installedModules   = Get-ChildItem -Path .\modules | where {$_.name -ne "hash"}
+
+# Import modules
+Write-Host "Importing modules..." -f Green
+foreach ($installedModule in $installedModules) {
+    write-host "- Importing: $($installedModule.name)" -f Green
+    # Check if- and remove previous imported module of same name
+    if(get-module $($installedModule.name)) {
+        try {
+            Remove-Module $($installedModule.name) -force -ErrorAction Stop
+        } catch {
+            Write-Host "WARNING: Unable to reload `"$($installedModule.name)`". If this causes any issues, try running the script in a new terminal." -f Yellow
+        }
+    }
+
+    #import module
+    try {
+        import-module .\modules\$($installedModule.name)
+    } catch {
+        if ($_.Exception.Message -eq "Assembly with same name is already loaded") {
+            $assemblyLocation = [System.AppDomain]::CurrentDomain.GetAssemblies() | Where-Object Location | Sort-Object -Property FullName | Select-Object -Property FullName, Location, GlobalAssemblyCache, IsFullyTrusted | where {$_.FullName -match "$($installedModule.name)"} | select -ExpandProperty Location
+
+            write-host "`nWarning: Assembly already loaded for $($installedModule.name). You are getting this error because importing modules also imports .NET assemblies, and while we can unload powershell modules, we cannot unload assemblies" -f Yellow
+            write-host "This script installs and loads dependent modules in the project itself, but your current terminal have allready loaded another installed version ot the assembly from $assemblyLocation" -f Yellow
+            write-host "You have three options:" -f Yellow
+            write-host "1 - contune running the script. You will probably get a lot of error messages. Things might work, or it might not..." -f Yellow
+            write-host "2 - Create and execute the code in a new terminal" -f Yellow
+            write-host "3 - Close the folder, then restart vscode and try again" -f Yellow
+            write-host "`nPress ENTER to continue, or press ctrl+c to abort (you should abort and go for step 2 or 3)"
+            read-host ".."
+            
+
+
+        }
+    }
+}
+
+
+
+
+
+
+
+
+# Verify that modules are imported (and installed)
+
 $loadedModules = get-module | select -ExpandProperty name
 $unloadedModules = @()
 foreach ($m in $installedModules.name) {
