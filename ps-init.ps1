@@ -114,13 +114,16 @@ $content = @'
 $psInitTargetVersion = "0.4.4"
 
 # process module dependencies. Run with -forceReprocess if necessary
-write-host "`nVerifying ps-init is installed with correct version" -f cyan
+write-host "`nVerifying PS-init is installed with correct version" -f cyan
 $psInitInstalled = Get-InstalledScript -Name "ps-init" -RequiredVersion $psInitTargetVersion -ErrorAction SilentlyContinue
 
 if(-not $psInitInstalled) {
     Write-host "Installing PS-INIT"  -f cyan
     Install-Script -Name ps-init -RequiredVersion $psInitTargetVersion -Force
 }
+
+$psInitInstalled = Get-InstalledScript -Name "ps-init" -RequiredVersion $psInitTargetVersion -ErrorAction SilentlyContinue
+write-host "PS-init version: $psInitInstalled"
 
 ps-init -forceReprocess:$false
 $LS = Get-Content .\local.settings.json | ConvertFrom-Json -Depth 10 -AsHashtable
@@ -142,7 +145,7 @@ while ($continueLoop) {
     if ($finished -eq $true) {
         $continueLoop = $false
     } else {
-        write-host "Select option" -f green
+        write-host "`nSelect option" -f green
         write-host "-------------" -f green
         write-host "[1] - Continue loop" -f green
         write-host "[2] - Exit loop" -f green
@@ -309,13 +312,11 @@ if(Test-Path .\modules\hash) {
 
 
 # Process modules
+# Start checking dependencies and stuff
+Write-Host "`nChecking module dependencies..." -ForegroundColor Green
 if($savedHash -ne $hash -or $hashAge -gt 7 -or $forceReprocess) {
-
-
-    write-host "`nInitializing..." -f Green
     
-    # Start checking dependencies and stuff
-    Write-Host "`nChecking dependencies..." -ForegroundColor Green
+
 
 
     # Path to the Dependencies.psd1 file
@@ -337,6 +338,7 @@ if($savedHash -ne $hash -or $hashAge -gt 7 -or $forceReprocess) {
         # Get all available versions of the module
         $availableVersions = Find-Module -Name $moduleName -AllVersions | Select-Object -ExpandProperty Version
 
+
         # Filter and sort available versions based on the requiredVersion
         $filteredVersions = $availableVersions | Where-Object {
             if ($hasWildcards) {
@@ -348,8 +350,12 @@ if($savedHash -ne $hash -or $hashAge -gt 7 -or $forceReprocess) {
         } | Sort-Object {[Version]$_} -Descending
 
         # Determine the latest available version that matches the requirement
-        $latestAvailableVersion = $filteredVersions | Select-Object -First 1
-
+        if([System.Management.Automation.WildcardPattern]::ContainsWildcardCharacters($requiredVersion)) {
+            $latestAvailableVersion = $filteredVersions | Select-Object -First 1
+        } else {
+            $latestAvailableVersion = $filteredVersions | where {$_ -eq $requiredVersion}            
+        }
+    
         return $latestAvailableVersion
     }
 
@@ -411,7 +417,12 @@ if($savedHash -ne $hash -or $hashAge -gt 7 -or $forceReprocess) {
     foreach ($name in $dependencies.keys) {
         try {
             # Get our target version
+            $targetVersion = $null
             [version]$targetVersion = Get-requiredModuleVersion -moduleName $name -requiredVersion $dependencies[$name]
+
+            if (-not $targetVersion) {
+                write-host "`nWARNING: Could not find module version $($dependencies[$name]) for the module $name" -f Yellow
+            }
 
             # Check if module is installed
             if(test-path .\modules\$name) {
@@ -471,10 +482,11 @@ if($savedHash -ne $hash -or $hashAge -gt 7 -or $forceReprocess) {
         write-host "- Removing unused module:`"$($unusedModule.inputObject)`"" -f Green
         remove-item -Path .\modules\$($unusedModule.inputObject) -Recurse -Force | out-null
     }
-    write-host "Dependencies complete!`n`n" -f Green
+    write-host "`nDependencies complete!" -f Green
 
 
     # Sort modules for import after dependencies
+    [array]$installedModules   = Get-ChildItem -Path .\modules | where {$_.name -ne "hash"}
     $moduleArr = @()
     foreach ($mod in $installedModules) {
         $obj = [PSCustomObject]@{
@@ -516,7 +528,7 @@ if($savedHash -ne $hash -or $hashAge -gt 7 -or $forceReprocess) {
 [array]$installedModules   = Get-ChildItem -Path .\modules | where {$_.name -ne "hash"}
 
 # Import modules
-Write-Host "Importing modules..." -f Green
+Write-Host "`nImporting modules..." -f Green
 foreach ($installedModule in $installedModules) {
     write-host "- Importing: $($installedModule.name)" -f Green
     # Check if- and remove previous imported module of same name
@@ -575,7 +587,7 @@ if ($unloadedModules) {
     write-host "`nERROR: Try rerunning the script, manually loading the module(s) or executing in a new terminal" -f Red
     write-host "Completed with errors" -f Yellow
 } else {
-    write-host "Complete!" -ForegroundColor Green
+    write-host "`nComplete!" -ForegroundColor Green
 
 }
 
